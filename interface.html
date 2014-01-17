@@ -6,12 +6,19 @@
               html { height: 100% }
               body { height: 100%; margin: 0; padding: 0 }
               #map-canvas { height: 100%; width: 80%; float: left;}
-              #controlBox {height: 90%; width: 20%; float: right; background: white;}
+              #controlBox {height: 100%; width: 20%; float: right; background: #DDD;
+                overflow: visible;
+              }
+              .buttonsBox{
+                height: 10%;
+              }
               .flightListBox{
                  -moz-box-shadow:    inset 0 0 5px #000000;
                  -webkit-box-shadow: inset 0 0 5px #000000;
                  box-shadow:         inset 0 0 10px #000000;
                  background-color: rgba(253, 253, 253, .4);
+                 max-height: 90%;
+                 overflow-y: scroll;
               }
 
               .flightBox{
