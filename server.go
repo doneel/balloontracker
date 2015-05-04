@@ -27,7 +27,7 @@ var START_LOCATIONS = []location{
 	location{Latitude: 45.220, Longitude: -111.761},
 }
 
-var ALTITUDES = []int{10000, 20000, 30000, 50000, 60000}
+var ALTITUDES = []int{8000, 10000, 12000, 15000, 18000, 20000, 30000, 50000}
 
 var REQUEST_INTERVAL_STRING = "6h"
 
