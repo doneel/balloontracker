@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/user"
 	"sync"
 	"time"
 )
@@ -31,7 +31,7 @@ var ALTITUDES = []int{10000, 20000, 30000, 50000, 60000}
 
 var REQUEST_INTERVAL_STRING = "6h"
 
-var DB_FILE string = "~/.balloontracker/pathDb.db"
+var DB_FILE string = "/.balloontrackerDb.db"
 
 type pageData struct {
 	JsonFlightData string
@@ -39,10 +39,10 @@ type pageData struct {
 
 func main() {
 	flag.Parse()
-	db, err := sql.Open("sqlite3", DB_FILE)
-	if err != nil {
-		log.Fatal(err)
-	}
+
+	usr, _ := user.Current()
+	dbPath := usr.HomeDir + DB_FILE
+	db := openDb(dbPath)
 
 	var waitGroup sync.WaitGroup
 	intervalDuration, err := time.ParseDuration(REQUEST_INTERVAL_STRING)

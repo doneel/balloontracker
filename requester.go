@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"io/ioutil"
@@ -33,8 +34,11 @@ var TIME_LAYOUT string = "2006010215"
 
 type flightPath struct {
 	Readings  []reading
-	FinalLat  float64
-	FinalLong float64
+	StartLat  float64
+	StartLon  float64
+	EndLat    float64
+	EndLon    float64
+	Ceiling   int
 	Timestamp time.Time
 }
 
@@ -58,37 +62,50 @@ func beginRequesting(locs []location, alts []int, interval time.Duration, db *sq
 func requestAll(locs []location, alts []int, db *sql.DB) {
 	for _, loc := range locs {
 		for _, altitude := range alts {
-			fp := requestFlightPath(loc, altitude)
-			fmt.Printf("%f, %f, %d, %v\n", loc.Latitude, loc.Longitude, altitude, *fp)
+			fp, err := requestFlightPath(loc, altitude)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Printf("%f, %f, %d, %v\n", loc.Latitude, loc.Longitude, altitude, fp.Timestamp)
+			//Write to db now
+			_, insertErr := writeFlight(fp, db)
+			if err != nil {
+				fmt.Println("Insertion error: ", insertErr)
+			}
 		}
 	}
 }
 
-func requestFlightPath(loc location, altitude int) *flightPath {
-	timeStamp := getCurrentTimestamp()
-	timeStr := timeStamp.Format(TIME_LAYOUT)
+func requestFlightPath(loc location, altitude int) (*flightPath, error) {
+	timeStr := getCurrentTimestamp().Format(TIME_LAYOUT)
 	requestString := "http://weather.uwyo.edu/cgi-bin/balloon_traj?TIME=" + timeStr + "&FCST=0&POINT=none&TOP=" + fmt.Sprint(altitude) + "&OUTPUT=list&LAT=" + fmt.Sprint(loc.Latitude) + "&LON=" + fmt.Sprint(loc.Longitude)
 	resp, err := http.Get(requestString)
 
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 
 	dataCleaner, re_err := regexp.Compile("<pre>\\s([0-9][\\s|\\S]*)\\s<\\/PRE>")
-	if err != nil {
-		log.Fatal(re_err)
+	if re_err != nil {
+		return nil, re_err
 	}
 
 	match := dataCleaner.FindSubmatch(body[:])
 	if len(match) <= 1 {
-		log.Fatal("Regexed data bad")
+		return nil, errors.New("Regexed data bad")
 	}
 	individuals := strings.Split(string(match[1]), "\n")
 
-	return loadFlight(individuals, timeStamp)
+	dataTime, err := time.Parse(TIME_LAYOUT, timeStr)
+	fp := loadFlight(individuals, dataTime)
+	fp.StartLat = loc.Latitude
+	fp.StartLon = loc.Longitude
+	fp.Ceiling = altitude
+	return fp, nil
 }
 
 func loadFlight(individuals []string, t_stamp time.Time) *flightPath {
@@ -102,7 +119,7 @@ func loadFlight(individuals []string, t_stamp time.Time) *flightPath {
 			readingsArr[i] = *newReading
 		}
 	}
-	flight := flightPath{Readings: readingsArr, FinalLat: readingsArr[len(readingsArr)-1].Latitude, FinalLong: readingsArr[len(readingsArr)-1].Longitude, Timestamp: t_stamp}
+	flight := flightPath{Readings: readingsArr, EndLat: readingsArr[len(readingsArr)-1].Latitude, EndLon: readingsArr[len(readingsArr)-1].Longitude, Timestamp: t_stamp}
 	return &flight
 }
 
@@ -122,6 +139,14 @@ func initReading(line string) (*reading, error) {
 
 	return &reading{fields[0], numFields[0], numFields[1], numFields[2], numFields[3], numFields[4], numFields[5], numFields[6], numFields[7], numFields[8], numFields[9], numFields[9]}, nil
 
+}
+
+func getTruncatedTimestamp() time.Time {
+	duration, err := time.ParseDuration("6h")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return time.Now().Truncate(duration)
 }
 
 func getCurrentTimestamp() time.Time {
