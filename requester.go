@@ -109,12 +109,12 @@ func requestFlightPath(loc location, altitude int) (*flightPath, error) {
 }
 
 func loadFlight(individuals []string, t_stamp time.Time) *flightPath {
-	readingsArr := make([]reading, len(individuals))
+	readingsArr := make([]reading, len(individuals)-1)
 	for i, line := range individuals {
 		if len(line) != 0 {
 			newReading, create_err := initReading(line)
 			if create_err != nil {
-				log.Fatal("Couldn't create a reading from read data!")
+				fmt.Printf("Couldn't create a reading from read data: %v: %v\n", create_err, newReading)
 			}
 			readingsArr[i] = *newReading
 		}

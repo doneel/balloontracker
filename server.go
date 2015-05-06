@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -17,10 +18,19 @@ import (
 	"time"
 )
 
+type jsonPath struct {
+	Time     string
+	StartLat float64
+	StartLon float64
+	EndLat   float64
+	EndLon   float64
+	Ceiling  float64
+}
+
 var flightPaths *[]*flightPath
 var flightPathsJson string
 var filePermissions os.FileMode = 0664
-var port = flag.String("port", "80", "Specify which port to use as a webserver")
+var port = flag.String("port", "8080", "Specify which port to use as a webserver")
 var webPageFile = flag.String("outFile", "", "Specify where to write the generated webpage. This overrides any webserver settings and cancels the server.")
 
 var START_LOCATIONS = []location{
@@ -32,6 +42,8 @@ var ALTITUDES = []int{8000, 10000, 12000, 15000, 18000, 20000, 30000, 50000}
 var REQUEST_INTERVAL_STRING = "6h"
 
 var DB_FILE string = "/.balloontrackerDb.db"
+
+var MAIN_INTERFACE_PAGE = "html/interface.html"
 
 type pageData struct {
 	JsonFlightData string
@@ -50,8 +62,16 @@ func main() {
 		log.Fatal(err)
 	}
 	beginRequesting(START_LOCATIONS, ALTITUDES, intervalDuration, db, &waitGroup)
-	//	initDataManager(updateFlightData, &waitGroup)
-	fmt.Println("Datamanger initialized")
+	fmt.Printf("Datamanger initialized at %v\n", time.Now())
+
+	http.HandleFunc("/", homepageHandler)
+	http.HandleFunc("/paths/", func(writer http.ResponseWriter, request *http.Request) {
+		pathsHandler(writer, request, db)
+	})
+
+	assetServer := http.FileServer(http.Dir("assets"))
+	http.Handle("/assets/", http.StripPrefix("/assets/", assetServer))
+	http.ListenAndServe(":"+*port, nil)
 
 	/*	if len(*webPageFile) <= 0 {
 			fmt.Println("Now listening for http requests on port", ":"+*port)
@@ -60,6 +80,27 @@ func main() {
 		}
 	*/
 	waitGroup.Wait()
+}
+
+func homepageHandler(writer http.ResponseWriter, request *http.Request) {
+	http.ServeFile(writer, request, MAIN_INTERFACE_PAGE)
+}
+
+func pathsHandler(writer http.ResponseWriter, request *http.Request, db *sql.DB) {
+	fpListP, err := getAllPaths(db)
+	if err != nil {
+		fmt.Printf("Error getting paths from db: %v\n", err)
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	jsonArr, err := json.Marshal(*fpListP)
+	fmt.Printf("raw: %v\n\nmarshaled: %s\n\n\n\n", *fpListP, jsonArr)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writer.Header().Set("Content-Type", "application/json")
+	writer.Write(jsonArr)
 }
 
 func writeWebPageToFile(fullFilePath string) {

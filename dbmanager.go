@@ -25,7 +25,7 @@ func openDb(filePath string) *sql.DB {
 func createDb(db *sql.DB) {
 	createStatement := `
 	create table if not exists Path (
-	    pid int PRIMARY KEY,
+	    pid integer PRIMARY KEY,
 	    time text,
 	    startLat real,
 	    startLon real,
@@ -90,4 +90,29 @@ func insertCheckpoint(cp reading, pid int64, db *sql.DB) (int64, error) {
 	cpid, err2 := result.LastInsertId()
 	return cpid, err2
 
+}
+
+func getAllPaths(db *sql.DB) (*[]jsonPath, error) {
+	paths := make([]jsonPath, 0)
+	rows, err := db.Query(`SELECT * FROM Path GROUP BY ceiling ORDER BY time DESC`)
+	if err != nil {
+		return &paths, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var fp jsonPath
+		var id string //int64
+
+		if err := rows.Scan(&id, &fp.Time, &fp.StartLat, &fp.StartLon, &fp.EndLat, &fp.EndLon, &fp.Ceiling); err != nil {
+			return &paths, err
+		}
+		fmt.Println(id)
+		paths = append(paths, fp)
+
+	}
+	if err := rows.Err(); err != nil {
+		return &paths, err
+	}
+	return &paths, nil
 }
