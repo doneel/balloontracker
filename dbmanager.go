@@ -102,12 +102,16 @@ func getAllPaths(db *sql.DB) (*[]jsonPath, error) {
 
 	for rows.Next() {
 		var fp jsonPath
-		var id string //int64
+		var id int64
 
 		if err := rows.Scan(&id, &fp.Time, &fp.StartLat, &fp.StartLon, &fp.EndLat, &fp.EndLon, &fp.Ceiling); err != nil {
 			return &paths, err
 		}
-		fmt.Println(id)
+		cpsP, err := getCheckpoints(db, id)
+		if err != nil {
+			fmt.Printf("Error parsing checkpoint: %v: %v\n", err, *cpsP)
+		}
+		fp.Checkpoints = *cpsP
 		paths = append(paths, fp)
 
 	}
@@ -115,4 +119,26 @@ func getAllPaths(db *sql.DB) (*[]jsonPath, error) {
 		return &paths, err
 	}
 	return &paths, nil
+}
+
+func getCheckpoints(db *sql.DB, pid int64) (*[]jsonCheckpoint, error) {
+	points := make([]jsonCheckpoint, 0)
+	rows, err := db.Query(`SELECT time, latitude, longitude, altitude, temperature FROM Checkpoint WHERE pid = ?`, pid)
+
+	if err != nil {
+		return &points, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cp jsonCheckpoint
+		if err := rows.Scan(&cp.Time, &cp.Lat, &cp.Lon, &cp.Altitude, &cp.Temperature); err != nil {
+			return &points, err
+		}
+		points = append(points, cp)
+	}
+	if err := rows.Err(); err != nil {
+		return &points, err
+	}
+	return &points, nil
 }

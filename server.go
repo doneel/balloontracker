@@ -19,12 +19,21 @@ import (
 )
 
 type jsonPath struct {
-	Time     string
-	StartLat float64
-	StartLon float64
-	EndLat   float64
-	EndLon   float64
-	Ceiling  float64
+	Time        string
+	StartLat    float64
+	StartLon    float64
+	EndLat      float64
+	EndLon      float64
+	Ceiling     float64
+	Checkpoints []jsonCheckpoint
+}
+
+type jsonCheckpoint struct {
+	Time        string
+	Lat         float64
+	Lon         float64
+	Altitude    float64
+	Temperature float64
 }
 
 var flightPaths *[]*flightPath
