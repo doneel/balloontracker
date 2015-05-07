@@ -94,7 +94,7 @@ func insertCheckpoint(cp reading, pid int64, db *sql.DB) (int64, error) {
 
 func getAllPaths(db *sql.DB) (*[]jsonPath, error) {
 	paths := make([]jsonPath, 0)
-	rows, err := db.Query(`SELECT * FROM Path GROUP BY ceiling ORDER BY time DESC`)
+	rows, err := db.Query(`SELECT * FROM Path ORDER BY time DESC`)
 	if err != nil {
 		return &paths, err
 	}

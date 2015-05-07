@@ -18,20 +18,15 @@
           <div id="map-canvas"></div>
           <div id="controlBox">
                <div class="buttonsBox">
-                    <label>Show flight paths</label>
-                    <input type="checkbox" id="linesBox" checked name="showLines" />
-                    <br/>
-                    <label>Show landing spots</label>
-                    <input type="checkbox" id="markerBox" checked name="showMarkers" />
-                    <br/>
-                    <label>Fade older flights</label>
-                    <input type="checkbox" id="opacityBox" unchecked name="scaleOpacity" />
-                    <br/>
+                   <input type="radio" name="display" value="hm" true>Heatmap</input>
+                   <input type="radio" name="display" value="points">Individual</input>
+                    <br />
                     <label>Show flights in past</label>
-                    <input type="number" id="days-box" name="days" min="1" max="7"> days
+                    <input type="number" id="days-box" name="days" min="1" max="7" disabled> days
                     <br />
                     <label>Burst Altitude</label>
                     <select id="altitude-selector">
+                        <option value="-1">All</option>
                     </select> 
                </div>
           </div>

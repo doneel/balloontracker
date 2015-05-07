@@ -103,7 +103,7 @@ func pathsHandler(writer http.ResponseWriter, request *http.Request, db *sql.DB)
 		return
 	}
 	jsonArr, err := json.Marshal(*fpListP)
-	fmt.Printf("raw: %v\n\nmarshaled: %s\n\n\n\n", *fpListP, jsonArr)
+	//	fmt.Printf("raw: %v\n\nmarshaled: %s\n\n\n\n", *fpListP, jsonArr)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
